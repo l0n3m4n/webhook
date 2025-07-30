@@ -96,3 +96,45 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 ## 🔐 Security Notes
 - This tool uses SSH for Serveo and a reverse proxy for Cloudflared.
 - Ensure you trust any services you expose publicly.
+
+## ✅ TODO List
+
+### 🔌 Tunnel Providers
+- [ ] Add support for multiple tunneling services:
+  - [ ] `Serveo`
+  - [ ] `Cloudflared`
+  - [ ] `Ngrok`
+  - [ ] `LocalTunnel`
+- [ ] Add CLI flags for selecting tunnel provider (e.g., `--serveo`, `--cloudflared`, `--ngrok`)
+- [ ] Auto-detect and install missing binaries (e.g., `ngrok`, `cloudflared`)
+
+### 🌐 Server Features
+- [ ] Display public tunnel URL clearly
+- [ ] Serve files from a specified directory
+- [ ] Web-based directory listing with download buttons
+- [ ] File upload support for RCE/LFI testing
+- [ ] Log incoming HTTP requests (IP, User-Agent, Time)
+
+### ⏱️ Control & Automation
+- [ ] Implement auto-shutdown timer
+- [ ] Auto-reconnect/restart tunnels on failure
+- [ ] Add password protection for server access
+
+### 🧪 Exploitation Helpers
+- [ ] Generate payload templates:
+  - [ ] XSS (DOM, Reflected, Stored)
+  - [ ] CSRF Proof of Concept
+  - [ ] LFI/RFI test cases
+  - [ ] SSRF test URLs
+- [ ] Webhook listener module (e.g., for Blind XSS or SSRF detection)
+- [ ] Integrate with Interactsh or Burp Collaborator
+
+### 🛠️ Developer Tools
+- [ ] Proxy chaining to local tools like Burp Suite
+- [ ] Optional local logging
+- [ ] QR code generator for public URLs
+- [ ] CLI output beautification (colors, banners, progress indicators)
+
+---
+
+> Contributions and suggestions are welcome!
