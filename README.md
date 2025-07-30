@@ -101,19 +101,19 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 
 ### 🔌 Tunnel Providers
 - [ ] Add support for multiple tunneling services:
-  - [ ] `Serveo`
-  - [ ] `Cloudflared`
+  - [x] `Serveo`
+  - [x] `Cloudflared`
   - [ ] `Ngrok`
   - [ ] `LocalTunnel`
 - [ ] Add CLI flags for selecting tunnel provider (e.g., `--serveo`, `--cloudflared`, `--ngrok`)
 - [ ] Auto-detect and install missing binaries (e.g., `ngrok`, `cloudflared`)
 
 ### 🌐 Server Features
-- [ ] Display public tunnel URL clearly
-- [ ] Serve files from a specified directory
+- [x] Display public tunnel URL clearly
+- [x] Serve files from a specified directory
 - [ ] Web-based directory listing with download buttons
 - [ ] File upload support for RCE/LFI testing
-- [ ] Log incoming HTTP requests (IP, User-Agent, Time)
+- [x] Log incoming HTTP requests (IP, User-Agent, Time)
 
 ### ⏱️ Control & Automation
 - [ ] Implement auto-shutdown timer
@@ -133,7 +133,7 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 - [ ] Proxy chaining to local tools like Burp Suite
 - [ ] Optional local logging
 - [ ] QR code generator for public URLs
-- [ ] CLI output beautification (colors, banners, progress indicators)
+- [x] CLI output beautification (colors, banners, progress indicators)
 
 ---
 
