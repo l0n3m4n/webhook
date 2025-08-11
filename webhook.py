@@ -6,6 +6,7 @@ import subprocess
 import threading
 import logging
 import argparse
+import textwrap
 import os
 import sys
 import shutil
@@ -42,6 +43,16 @@ def print_banner():
 {RESET}"""
     print(banner)
 
+# auto-detect missing binaries 
+def require_binary(binary_name, install_hint=None):
+    """Check if a binary exists. If not, print install instructions and exit."""
+    if shutil.which(binary_name) is None:
+        print(f"{RED}[!] Required binary '{binary_name}' not found.{RESET}")
+        if install_hint:
+            print(f"{YELLOW}[i] Install it with:{RESET}\n  {install_hint}")
+        sys.exit(1)
+
+
 
 # Custom handler to print and log headers
 class RequestHandler(SimpleHTTPRequestHandler):
@@ -77,6 +88,8 @@ def start_http_server(directory, port):
 
 
 def start_serveo_tunnel(port):
+    require_binary("ssh", "sudo apt install openssh-client")
+
     print(f"{BLUE}[i] Attempting to open Serveo tunnel on port {port}...{RESET}", flush=True)
     try:
         subprocess.run(
@@ -89,10 +102,7 @@ def start_serveo_tunnel(port):
 
 
 def start_cloudflared_tunnel(port):
-    if shutil.which("cloudflared") is None:
-        print(f"{RED}[!] cloudflared is not installed. Please install it first.{RESET}")
-        print(f"{CYAN}    https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/{RESET}")
-        sys.exit(1)
+    require_binary("cloudflared", "https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/")
 
     print(f"{BLUE}[i] Starting cloudflared tunnel on port {port}...{RESET}", flush=True)
     try:
@@ -105,20 +115,64 @@ def start_cloudflared_tunnel(port):
         sys.exit(1)
 
 
+def start_ngrok_tunnel(port):
+    require_binary("ngrok", "https://ngrok.com/download")
+
+    print(f"{BLUE}[i] Starting ngrok tunnel on port {port}...{RESET}")
+    try:
+        subprocess.run(["ngrok", "http", str(port)], check=True)
+    except subprocess.CalledProcessError:
+        print(f"{RED}[!] ngrok tunnel failed. Exiting.{RESET}")
+        sys.exit(1)
+
+
+def start_localtunnel(port):
+    require_binary("lt", "npm install -g localtunnel")
+
+    print(f"{BLUE}[i] Starting localtunnel tunnel on port {port}...{RESET}")
+    try:
+        subprocess.run(["lt", "--port", str(port)], check=True)
+    except subprocess.CalledProcessError:
+        print(f"{RED}[!] localtunnel failed. Exiting.{RESET}")
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Serve a local directory over HTTP and expose it via Serveo or cloudflared tunnel.",
-        epilog=f"{BLUE}Example:{RESET} sudo python3 webhook.py -p 8080 -d /var/www/html"
-    )
+    description="📡 Serve a local directory and expose it via a tunnel (Serveo, Cloudflared, Ngrok, LocalTunnel).",
+    epilog=textwrap.dedent(f"""{CYAN}
+    Examples:
+      python3 webhook.py -p 8080 --serveo
+      python3 webhook.py -p 80 -d /var/www/html --cloudflared
+      python3 webhook.py -p 3000 -d ~/my-site --ngrok
+      python3 webhook.py -p 8080 -d ~/my-site --localtunnel
+    {RESET}"""),
+    formatter_class=argparse.RawDescriptionHelpFormatter
+)
+  
     parser.add_argument("-p", "--port", type=int, default=80, help="Local port to serve (default: 80)")
     parser.add_argument("-d", "--directory", default=".", help="Directory to serve (default: current dir)")
+    
+    tunnel_group = parser.add_mutually_exclusive_group(required=True)
+    tunnel_group.add_argument("--serveo", action="store_true", help="Use Serveo tunnel")
+    tunnel_group.add_argument("--cloudflared", action="store_true", help="Use Cloudflared tunnel")
+    tunnel_group.add_argument("--ngrok", action="store_true", help="Use Ngrok tunnel")
+    tunnel_group.add_argument("--localtunnel", action="store_true", help="Use LocalTunnel tunnel")
+
+    
     args = parser.parse_args()
 
-    server_thread = threading.Thread(target=start_http_server, args=(args.directory, args.port))
-    server_thread.daemon = True
-    server_thread.start()
+    threading.Thread(target=start_http_server, args=(args.directory, args.port), daemon=True).start()
 
-    start_serveo_tunnel(args.port)
+    # Start selected tunnel
+    if args.serveo:
+        start_serveo_tunnel(args.port)
+    elif args.cloudflared:
+        start_cloudflared_tunnel(args.port)
+    elif args.ngrok:
+        start_ngrok_tunnel(args.port)
+    elif args.localtunnel:
+        start_localtunnel(args.port)
 
 
 if __name__ == "__main__":

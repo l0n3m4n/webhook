@@ -121,10 +121,10 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 - [ ] Add support for multiple tunneling services:
   - [x] `Serveo`
   - [x] `Cloudflared`
-  - [ ] `Ngrok`
-  - [ ] `LocalTunnel`
-- [ ] Add CLI flags for selecting tunnel provider (e.g., `--serveo`, `--cloudflared`, `--ngrok`)
-- [ ] Auto-detect and install missing binaries (e.g., `ngrok`, `cloudflared`)
+  - [x] `Ngrok`
+  - [x] `LocalTunnel`
+- [x] Add CLI flags for selecting tunnel provider (e.g., `--serveo`, `--cloudflared`, `--ngrok`)
+- [x] Auto-detect and install missing binaries (e.g., `ngrok`, `cloudflared`)
 
 ### 🌐 Server Features
 - [x] Display public tunnel URL clearly
