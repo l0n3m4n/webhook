@@ -126,7 +126,7 @@ curl -F "file=@secrets.tar.gz" https://abc123.cloudflareTunnel.com/upload
 ## ✅ TODO List
 
 ### 🔌 Tunnel Providers
-- [ ] Add support for multiple tunneling services:
+- [x] Add support for multiple tunneling services:
   - [x] `Serveo`
   - [x] `Cloudflared`
   - [x] `Ngrok`
