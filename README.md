@@ -37,7 +37,7 @@ This Python script serves a local directory over HTTP and exposes it securely to
 It’s especially useful for:
 
 - 📁 Hosting payloads or exploits during red team exercises or CTFs
-- 📤 Exfiltrating data from compromised targets in a controlled environment
+- 📤 Exfiltrating data from compromised targets in a controlled environment via (`https`)
 - 🧪 Testing XSS, CSRF, and SSRF vulnerabilities by exposing local endpoints
 - 🌐 Simulating external servers during bug bounty engagements
 - 💻 Demonstrating proof-of-concepts (PoCs) for file uploads or callbacks
