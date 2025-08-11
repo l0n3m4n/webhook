@@ -106,9 +106,7 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 ![output](assets/output.png)
 ![status_codes](assets/status_codes.png)
 ![headers_log](assets/headers_logs.png)
-- This will:
-    - Serve files at http://localhost:8080
-    - Attempt to expose it via Serveo
+ 
 
 ## 🔁 Data exfiltration
 ```bash
