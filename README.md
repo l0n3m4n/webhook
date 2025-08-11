@@ -83,6 +83,7 @@ sudo apt install cloudflared  # Or follow: https://developers.cloudflare.com/clo
 
 ## 🐧 Kali linux (debian,ubuntu)
 ```bash
+# system update
 sudo apt update
 
 # dependencies
