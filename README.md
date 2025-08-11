@@ -80,6 +80,23 @@ chmod +x webhook.py
 # (Optional) Install cloudflared if not using Serveo
 sudo apt install cloudflared  # Or follow: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
 ```
+
+## 🐧 Kali linux (debian,ubuntu)
+```bash
+sudo apt update
+
+# dependencies
+sudo apt install -y curl gnupg lsb-release
+
+# Add Cloudflare's GPG key
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloudflare-main.gpg
+
+# Add the Cloudflare apt repository
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+
+# Update apt again and Install
+sudo apt update && sudo apt install cloudflared -y 
+```
 ## 📡 Usage
 ```bash
 sudo python3 webhook.py -p 8080 -d /var/www/html
