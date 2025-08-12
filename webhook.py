@@ -5,8 +5,12 @@ import socketserver
 import subprocess
 import threading
 import logging
+import socket 
 import argparse
 import textwrap
+import requests
+import cgi 
+import time 
 import os
 import sys
 import shutil
@@ -43,6 +47,15 @@ def print_banner():
 {RESET}"""
     print(banner)
 
+# Check if a port is available
+def is_port_available(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("", port))
+            return True
+        except OSError:
+            return False
+
 # auto-detect missing binaries 
 def require_binary(binary_name, install_hint=None):
     """Check if a binary exists. If not, print install instructions and exit."""
@@ -51,6 +64,17 @@ def require_binary(binary_name, install_hint=None):
         if install_hint:
             print(f"{YELLOW}[i] Install it with:{RESET}\n  {install_hint}")
         sys.exit(1)
+
+def check_dependencies(args):
+    """Check and enforce required binaries based on selected tunnel."""
+    if args.serveo:
+        require_binary("ssh", "sudo apt install openssh-client")
+    elif args.cloudflared:
+        require_binary("cloudflared", "https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/")
+    elif args.ngrok:
+        require_binary("ngrok", "https://ngrok.com/download")
+    elif args.localtunnel:
+        require_binary("lt", "npm install -g localtunnel")
 
 
 
@@ -62,6 +86,43 @@ class RequestHandler(SimpleHTTPRequestHandler):
             headers_str += f"{key}: {value}\n"
         logging.info(headers_str)
         super().do_GET()
+    
+
+    def do_POST(self):
+        if self.path != "/upload":
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"404 Not Found.\n")
+            return
+
+        ctype, pdict = cgi.parse_header(self.headers.get('content-type', ''))
+        if ctype == 'multipart/form-data':
+            pdict['boundary'] = bytes(pdict['boundary'], "utf-8")
+            pdict['CONTENT-LENGTH'] = int(self.headers['Content-Length'])
+            form = cgi.FieldStorage(fp=self.rfile, headers=self.headers,
+                                    environ={'REQUEST_METHOD':'POST'},
+                                    keep_blank_values=True)
+
+            if 'file' in form:
+                file_item = form['file']
+                filename = os.path.basename(file_item.filename)
+                file_data = file_item.file.read()
+
+                with open(filename, 'wb') as f:
+                    f.write(file_data)
+
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(f"File '{filename}' received and saved.\n".encode())
+
+                # Logging
+                logging.info(f"\n[POST] {self.client_address[0]} uploaded file: {filename}")
+                return
+
+        # If not multipart/form-data or 'file' missing
+        self.send_response(400)
+        self.end_headers()
+        self.wfile.write(b"Bad Request: Expected multipart/form-data with file field.\n")
 
     def log_message(self, format, *args):
         message = format % args
@@ -77,7 +138,6 @@ class RequestHandler(SimpleHTTPRequestHandler):
                 print(f"{status_text} - Not Found: {request_path}", flush=True)
             else:
                 print(f"{status_text} - {self.requestline}", flush=True)
-
 
 def start_http_server(directory, port):
     os.chdir(directory)
@@ -119,12 +179,38 @@ def start_ngrok_tunnel(port):
     require_binary("ngrok", "https://ngrok.com/download")
 
     print(f"{BLUE}[i] Starting ngrok tunnel on port {port}...{RESET}")
+
     try:
-        subprocess.run(["ngrok", "http", str(port)], check=True)
+        # Start ngrok in the background
+        ngrok_process = subprocess.Popen(["ngrok", "http", str(port)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Wait for ngrok's web interface to become available
+        time.sleep(3)  # give ngrok time to start
+
+        # Try to get the tunnel URL from the ngrok API
+        try:
+            resp = requests.get("http://localhost:4040/api/tunnels")
+            tunnels = resp.json()["tunnels"]
+            public_urls = [t["public_url"] for t in tunnels if t["proto"] == "http" or t["proto"] == "https"]
+
+            if public_urls:
+                print(f"{GREEN}[+] Ngrok tunnel is live!{RESET}")
+                for url in public_urls:
+                    print(f"{CYAN}[*] Public URL: {WHITE}{url}{RESET}")
+            else:
+                print(f"{YELLOW}[!] No public URLs found from ngrok API.{RESET}")
+
+        except requests.ConnectionError:
+            print(f"{RED}[!] Unable to connect to ngrok API (http://localhost:4040).{RESET}")
+            ngrok_process.terminate()
+            sys.exit(1)
+
+        # Keep the process running so ngrok stays alive
+        ngrok_process.wait()
+
     except subprocess.CalledProcessError:
         print(f"{RED}[!] ngrok tunnel failed. Exiting.{RESET}")
         sys.exit(1)
-
 
 def start_localtunnel(port):
     require_binary("lt", "npm install -g localtunnel")
@@ -140,7 +226,7 @@ def start_localtunnel(port):
 def main():
     parser = argparse.ArgumentParser(
     description="📡 Serve a local directory and expose it via a tunnel (Serveo, Cloudflared, Ngrok, LocalTunnel).",
-    epilog=textwrap.dedent(f"""{CY}
+    epilog=textwrap.dedent(f"""{CYAN}
     Examples:
       python3 webhook.py -p 8080 --serveo
       python3 webhook.py -p 80 -d /var/www/html --cloudflared
@@ -161,7 +247,13 @@ def main():
 
     
     args = parser.parse_args()
-
+    check_dependencies(args)
+     
+     
+    if not is_port_available(args.port):
+        print(f"{RED}[!] Port {args.port} is already in use. Choose a different port.{RESET}")
+        sys.exit(1)
+    
     threading.Thread(target=start_http_server, args=(args.directory, args.port), daemon=True).start()
 
     # Start selected tunnel

