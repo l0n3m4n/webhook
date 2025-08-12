@@ -43,7 +43,7 @@ def print_banner():
 |  |.'.|  | |  .--' | /`'.  ||  .-.  | \\|  |)|  | \\|  |)|  ||  .   '  
 |   ,'.   | |  `---.| '--'  /|  | |  |  '  '-'  '  '  '-'  '|  |\\   \\ 
 `--'   '--' `------'`------' `--' `--'   `-----'    `-----' `--' '--' 
-     Author: l0n3m4n | Version: 1.1.3 | Serveo/Cloudflared Tunnel 
+     Author: l0n3m4n | Version: 1.1.3 | Tunneling local Server 
 {RESET}"""
     print(banner)
 
