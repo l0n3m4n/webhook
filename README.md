@@ -62,8 +62,13 @@ It’s especially useful for:
 
 ## 🛠 Requirements
 
-- Python 3.6+
-- `cloudflared` (only if Serveo is unavailable)
+  - Python 3.6+
+  - Internet access (for tunnels)
+  - At least one tunneling tool installed:
+      * Serveo (via SSH)
+      * cloudflared (fallback if Serveo fails)
+      * ngrok (optional)
+      * localtunnel (optional)
 
 ---
 
