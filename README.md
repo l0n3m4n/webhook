@@ -44,8 +44,6 @@ It’s especially useful for:
 - 🔐 Secure remote access to localhost web apps for testing
 - 📡 Bypassing NAT/firewall restrictions without port forwarding
 
-![Banner](assets/banner.png)
-
 ---
 
 ## 🚀 Features
@@ -59,7 +57,6 @@ It’s especially useful for:
 - Easy to use CLI
 
 ---
-
 
 ## 🚀 Banner  
 ```bash
