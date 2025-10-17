@@ -14,8 +14,12 @@ import time
 import os
 import sys
 import shutil
+import json
+from urllib.parse import urlparse, parse_qs
 from http.server import SimpleHTTPRequestHandler
 from datetime import datetime
+from PIL import Image
+from PIL.ExifTags import TAGS
 
 # ANSI terminal colors
 RED = "\033[91m"
@@ -75,17 +79,251 @@ def check_dependencies(args):
         require_binary("ngrok", "https://ngrok.com/download")
     elif args.localtunnel:
         require_binary("lt", "npm install -g localtunnel")
+    if args.exiftool: # Check exiftool independently
+        require_binary("exiftool", "sudo apt install libimage-exiftool-perl")
 
+
+
+def human_readable_size(size, decimal_places=2):
+    for unit in ['B', 'kb', 'mb', 'gb', 'tb']:
+        if size < 1024.0:
+            break
+        size /= 1024.0
+    return f"{size:.{decimal_places}f} {unit}"
 
 
 # Custom handler to print and log headers
 class RequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
+        if self.path == '/logs':
+            try:
+                with open('headers.log', 'r') as f:
+                    logs = f.read()
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(logs.encode('utf-8'))
+            except FileNotFoundError:
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(b'') # Send empty response if log file doesn't exist
+            return
+
         headers_str = f"\n[Request] {self.client_address[0]} - Path: {self.path}\n"
         for key, value in self.headers.items():
             headers_str += f"{key}: {value}\n"
         logging.info(headers_str)
-        super().do_GET()
+
+        if self.path.startswith('/metadata'):
+            query_components = parse_qs(urlparse(self.path).query)
+            file_path = query_components.get('file', [None])[0]
+
+            if not file_path:
+                self.send_error(400, "File parameter is missing")
+                return
+
+            # Security check to prevent directory traversal
+            current_dir = os.getcwd()
+            requested_path = os.path.join(current_dir, file_path.lstrip('/'))
+            if not os.path.abspath(requested_path).startswith(current_dir):
+                self.send_error(403, "Forbidden")
+                return
+
+        if self.path.startswith('/metadata'):
+            query_components = parse_qs(urlparse(self.path).query)
+            file_path = query_components.get('file', [None])[0]
+
+            if not file_path:
+                self.send_error(400, "File parameter is missing")
+                return
+
+            # Security check to prevent directory traversal
+            current_dir = os.getcwd()
+            requested_path = os.path.join(current_dir, file_path.lstrip('/'))
+            if not os.path.abspath(requested_path).startswith(current_dir):
+                self.send_error(403, "Forbidden")
+                return
+
+            try:
+                metadata = {}
+                # Check if exiftool is selected
+                if hasattr(self.server, 'args') and self.server.args.exiftool:
+                    print(f"{GREEN}[+] Extracting metadata using ExifTool for {file_path}{RESET}")
+                    # Execute exiftool as a subprocess
+                    process = subprocess.run(
+                        ["exiftool", "-json", requested_path],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    metadata = json.loads(process.stdout)[0]
+                    if metadata:
+                        print(f"{GREEN}[+] Found metadata using ExifTool for {file_path}{RESET}")
+                    else:
+                        print(f"{YELLOW}[!] No metadata found using ExifTool for {file_path}{RESET}")
+                else:
+                    # Fallback to Pillow for image metadata if exiftool is not selected
+                    print(f"{GREEN}[+] Extracting metadata using Pillow for {file_path}{RESET}")
+                    image = Image.open(requested_path)
+                    exif_data = image._getexif()
+                    metadata = {}
+                    if exif_data:
+                        print(f"{GREEN}[+] Found EXIF data (Pillow) for {file_path}{RESET}")
+                        for tag, value in exif_data.items():
+                            tag_name = TAGS.get(tag, tag)
+                            if isinstance(value, bytes):
+                                try:
+                                    metadata[tag_name] = value.decode('utf-8', errors='ignore')
+                                except UnicodeDecodeError:
+                                    metadata[tag_name] = repr(value)
+                            else:
+                                metadata[tag_name] = str(value)
+                    else:
+                        print(f"{YELLOW}[!] No EXIF data (Pillow) found for {file_path}{RESET}")
+
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(metadata).encode('utf-8'))
+            except FileNotFoundError:
+                self.send_error(404, "File not found")
+            except subprocess.CalledProcessError as e:
+                print(f"{RED}[!] ExifTool failed for {file_path}: {e.stderr}{RESET}")
+                self.send_error(500, f"ExifTool error: {e.stderr}")
+            except Exception as e:
+                print(f"{RED}[!] Error processing file {file_path}: {e}{RESET}")
+                self.send_error(500, f"Error processing file: {e}")
+            return
+
+        if self.path.startswith('/assets/ui/'):
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            file_path = os.path.join(script_dir, self.path.lstrip('/'))
+            
+            # Security check to prevent directory traversal
+            if not os.path.abspath(file_path).startswith(os.path.join(script_dir, 'assets', 'ui')):
+                self.send_error(403, "Forbidden")
+                return
+
+            content_type_map = {
+                '.css': 'text/css',
+                '.js': 'application/javascript',
+                '.html': 'text/html',
+            }
+            _, ext = os.path.splitext(file_path)
+            content_type = content_type_map.get(ext, 'application/octet-stream')
+
+            try:
+                with open(file_path, 'rb') as f:
+                    self.send_response(200)
+                    self.send_header('Content-type', content_type)
+                    self.end_headers()
+                    self.wfile.write(f.read())
+                return
+            except FileNotFoundError:
+                self.send_error(404, "File not found")
+                return
+
+        # Get the full path of the requested file/directory
+        current_dir = os.getcwd()
+        requested_path = os.path.join(current_dir, self.path.lstrip('/'))
+
+        if os.path.isdir(requested_path):
+            self.list_directory(requested_path)
+        else:
+            super().do_GET()
+
+    def list_directory(self, path):
+        try:
+            list = os.listdir(path)
+        except os.error:
+            self.send_error(404, "No permission to list directory")
+            return None
+        list.sort(key=lambda a: a.lower())
+        
+        # Generate the file list HTML
+        file_list_html = ''
+        if self.path != '/':
+            file_list_html += '<tr><td><a href=".."><span class="icon icon-dir"></span>..</a></td><td>Directory</td><td>-</td></tr>'
+
+        file_icon_map = {
+            # Documents
+            'pdf': 'icon-pdf',
+            'doc': 'icon-doc', 'docx': 'icon-doc',
+            'xls': 'icon-xls', 'xlsx': 'icon-xls',
+            'ppt': 'icon-ppt', 'pptx': 'icon-ppt',
+            'odt': 'icon-odt', 'ods': 'icon-ods', 'odp': 'icon-odp',
+            'rtf': 'icon-doc', 'csv': 'icon-csv',
+
+            # Code/Text
+            'txt': 'icon-text', 'log': 'icon-log', 'md': 'icon-markdown',
+            'json': 'icon-json', 'xml': 'icon-xml',
+            'py': 'icon-python', 'js': 'icon-javascript', 'html': 'icon-html', 'css': 'icon-css',
+            'php': 'icon-php', 'c': 'icon-c', 'cpp': 'icon-cpp', 'java': 'icon-java',
+            'go': 'icon-go', 'rb': 'icon-ruby', 'sh': 'icon-shell', 'bat': 'icon-shell', 'ps1': 'icon-shell',
+            'yml': 'icon-yaml', 'yaml': 'icon-yaml', 'conf': 'icon-config', 'ini': 'icon-config',
+
+            # Archives
+            'zip': 'icon-archive', 'tar': 'icon-archive', 'gz': 'icon-archive',
+            '7z': 'icon-archive', 'rar': 'icon-archive', 'iso': 'icon-archive',
+
+            # Images
+            'jpg': 'icon-image', 'jpeg': 'icon-image', 'png': 'icon-image', 'gif': 'icon-image',
+            'svg': 'icon-image', 'bmp': 'icon-image', 'webp': 'icon-image', 'psd': 'icon-psd',
+
+            # Audio/Video
+            'mp3': 'icon-audio', 'wav': 'icon-audio', 'ogg': 'icon-audio',
+            'mp4': 'icon-video', 'avi': 'icon-video', 'mov': 'icon-video', 'mkv': 'icon-video',
+
+            # Cybersecurity/Binary
+            'pcap': 'icon-network', 'cap': 'icon-network', 'pcapng': 'icon-network',
+            'key': 'icon-key', 'pem': 'icon-key', 'crt': 'icon-cert', 'cer': 'icon-cert',
+            'vpn': 'icon-vpn', 'ovpn': 'icon-vpn',
+            'db': 'icon-database', 'sqlite': 'icon-database', 'sql': 'icon-database', 'dump': 'icon-database',
+            'bin': 'icon-binary', 'exe': 'icon-binary', 'dll': 'icon-binary', 'elf': 'icon-binary', 'so': 'icon-binary',
+            'apk': 'icon-android', 'jar': 'icon-java-archive',
+            'config': 'icon-config',
+        }
+
+        for name in list:
+            fullname = os.path.join(path, name)
+            displayname = linkname = name
+            icon_class = "icon-file"
+            if os.path.isdir(fullname):
+                displayname = name + "/"
+                linkname = name + "/"
+                size = "-"
+                type = "Directory"
+                icon_class = "icon-dir"
+                actions = ""
+            else:
+                size = human_readable_size(os.path.getsize(fullname))
+                type = "File"
+                extension = os.path.splitext(name)[1].lstrip('.').lower()
+                icon_class = file_icon_map.get(extension, 'icon-file') # Default to generic file icon
+                actions = f'<button class="copy-btn" data-url="{linkname}">Copy URL</button>'
+
+            file_list_html += f'<tr><td><a href="{linkname}"><span class="icon {icon_class}"></span>{displayname}</a></td><td>{type}</td><td class="size-cell">{size}</td><td>{actions}</td></tr>'
+
+        # Read the template and inject the data
+        try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            template_path = os.path.join(script_dir, 'assets', 'ui', 'index.html')
+            with open(template_path, 'r') as f:
+                template = f.read()
+        except FileNotFoundError:
+            self.send_error(500, "Could not find template file")
+            return
+
+        content = template.replace('{directory_path}', self.path)
+        content = content.replace('{file_list}', file_list_html)
+
+        encoded_content = content.encode('utf-8')
+        self.send_response(200)
+        self.send_header("Content-type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded_content)))
+        self.end_headers()
+        self.wfile.write(encoded_content)
     
 
     def do_POST(self):
@@ -139,10 +377,11 @@ class RequestHandler(SimpleHTTPRequestHandler):
             else:
                 print(f"{status_text} - {self.requestline}", flush=True)
 
-def start_http_server(directory, port):
+def start_http_server(directory, port, args):
     os.chdir(directory)
     handler = RequestHandler
-    with socketserver.TCPServer(("", port), handler) as httpd:
+    with socketserver.TCPServer(('', port), handler) as httpd:
+        httpd.args = args # Pass args to the server
         print(f"{GREEN}[+] Serving {directory} on port {port}{RESET}")
         httpd.serve_forever()
 
@@ -245,6 +484,8 @@ def main():
     tunnel_group.add_argument("--ngrok", action="store_true", help="Use Ngrok tunnel")
     tunnel_group.add_argument("--localtunnel", action="store_true", help="Use LocalTunnel tunnel")
 
+    parser.add_argument("--exiftool", action="store_true", help="Use ExifTool for metadata extraction")
+
     
     args = parser.parse_args()
     check_dependencies(args)
@@ -254,7 +495,7 @@ def main():
         print(f"{RED}[!] Port {args.port} is already in use. Choose a different port.{RESET}")
         sys.exit(1)
     
-    threading.Thread(target=start_http_server, args=(args.directory, args.port), daemon=True).start()
+    threading.Thread(target=start_http_server, args=(args.directory, args.port, args), daemon=True).start()
 
     # Start selected tunnel
     if args.serveo:
