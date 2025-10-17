@@ -82,8 +82,16 @@ cd webhook
 # Make it executable
 chmod +x webhook.py
 
-# (Optional) Install cloudflared if not using Serveo
-sudo apt install cloudflared  # Or follow: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/
+# download latest release (amd64)
+curl -L -o cloudflared-linux-amd64 \
+  https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+
+# make it executable and install
+sudo install ./cloudflared-linux-amd64 /usr/local/bin/cloudflared
+sudo chmod +x /usr/local/bin/cloudflared
+
+# verify
+cloudflared --version
 ```
 
 ## 🐧 Kali linux (debian,ubuntu)
